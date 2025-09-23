@@ -1,0 +1,21 @@
+{
+  "name": "todo-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal Node.js backend for the Vibecoding Todo app",
+  "scripts": {
+    "dev": "nodemon --ext js,mjs,cjs,json --exec node index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.7.0",
+    "nanoid": "^4.0.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
