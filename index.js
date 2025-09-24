@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Todo from './models/Todo.js';
 import todosRouter from './routers/todosRouter.js';
 
@@ -10,6 +12,9 @@ const PORT = process.env.PORT || 5000;
 const ORIGIN = process.env.ORIGIN || '*';
 // Prefer MONGO_URI (common naming) then fallback to MONGO_URL, then local default
 const MONGO_URL = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/todoapp';
+// __dirname replacement for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // CORS 설정: 개발 환경에서 모든 오리진 허용
 app.use(cors({
@@ -39,7 +44,17 @@ app.use((_req, res, next) => {
 app.use(express.json());
 
 // Mount routers
-app.use('/api/todos', todosRouter); 
+app.use('/api/todos', todosRouter);
+// Backward-compatible alias (some clients may call /todos)
+app.use('/todos', todosRouter);
+
+// Simple root message
+app.get('/', (_req, res) => {
+    res.type('text/plain').send('Vibe Todo Backend is running. Try /health, /api/todos, or /todoapp');
+});
+
+// Serve a small static page at /todoapp (so the Heroku URL does not 404)
+app.use('/todoapp', express.static(path.join(__dirname, 'public', 'todoapp')));
 
 app.get('/health', (_req, res) => {
 	res.json({ ok: true, mongoState: mongoose.connection.readyState });
@@ -78,11 +93,15 @@ app.get('/debug/db', async (_req, res) => {
 
 async function start() {
 	try {
-		// Connect to MongoDB
-		await mongoose.connect(MONGO_URL);
-        console.log('MongoDB 연결 성공');
-        const conn = mongoose.connection;
-        console.log(`Mongo host: ${conn.host} | db: ${conn.name}`);
+        if (process.env.SKIP_DB === '1') {
+            console.warn('[warn] SKIP_DB=1: MongoDB 연결을 건너뜁니다 (정적 경로/헬스체크만 확인)');
+        } else {
+            // Connect to MongoDB
+            await mongoose.connect(MONGO_URL);
+            console.log('MongoDB 연결 성공');
+            const conn = mongoose.connection;
+            console.log(`Mongo host: ${conn.host} | db: ${conn.name}`);
+        }
 	} catch (err) {
 		console.error('MongoDB 연결 실패:', err.message);
 		process.exit(1);
